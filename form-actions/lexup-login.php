@@ -2,7 +2,7 @@
 namespace MiraiLexup;
 
 
-class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\Action_Base {
+class Elementor_Lexup_Login extends \ElementorPro\Modules\Forms\Classes\Action_Base {
   /**
   * Get Name
   *
@@ -12,7 +12,7 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
   * @return string
   */
   public function get_name() {
-    return 'lexup_check_student';
+    return 'lexup_login';
   }
 
   /**
@@ -24,7 +24,7 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
   * @return string
   */
   public function get_label() {
-    return 'Lexup Check Student';
+    return 'Lexup Login';
   }
 
   /**
@@ -45,14 +45,16 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
 
     $settings = $record->get( 'form_settings' );
     $emailField = $settings[$this->get_name() . "_email"];
+    $passField = $settings[$this->get_name() . "_password"];
 
     // Get submitted Form data
     $rawFields = (array) $record->get( 'fields' );
     $email = $rawFields[$emailField]["value"];
+    $pass = $rawFields[$passField]["value"];
 
-    $is_student = $lexup->check_student_mail($email);
+    $response = $lexup->login_user($email, $pass);
 
-    if($is_student === true){
+    if($response && $response["success"]){
 
       $redirect_to = $settings[$this->get_name() . "_url_success" ];
       $redirect_to = $record->replace_setting_shortcodes( $redirect_to, true );
@@ -61,15 +63,9 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
       }
       return;
 
-    } elseif($is_student === false){
-
-      $redirect_to = $settings[$this->get_name() . "_url_ineligible" ];
-      $redirect_to = $record->replace_setting_shortcodes( $redirect_to, true );
-      if ( ! empty( $redirect_to ) && filter_var( $redirect_to, FILTER_VALIDATE_URL ) ) {
-        $ajax_handler->add_response_data( 'redirect_url', $redirect_to );
-      }
+    } elseif(!empty($response["errors"])){
+      $ajax_handler->add_error(null, "Unauthorized");
       return;
-
     }
 
     $ajax_handler->add_error(null, "Non riesco a comunicare con Lexup!");
@@ -102,17 +98,7 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
         'label' => "Success URL",
         'type' => \Elementor\Controls_Manager::TEXT,
         'separator' => 'before',
-        'description' => "The url where the customer will be redirect if he is recognized as a student",
-      ]
-    );
-
-    $widget->add_control(
-      $this->get_name() . "_url_ineligible",
-      [
-        'label' => "Ineligible URL",
-        'type' => \Elementor\Controls_Manager::TEXT,
-        'separator' => 'before',
-        'description' => "The url where the customer will be redirect if his mail domain is not a student one in Lexup",
+        'description' => "The url where the customer will be redirect if he is logged in with success",
       ]
     );
 
@@ -123,6 +109,16 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
         'type' => \Elementor\Controls_Manager::TEXT,
         'separator' => 'before',
         'description' => "The form field ID containing the email of customer",
+      ]
+    );
+
+    $widget->add_control(
+      $this->get_name() . "_password",
+      [
+        'label' => "FIELD: Password",
+        'type' => \Elementor\Controls_Manager::TEXT,
+        'separator' => 'none',
+        'description' => "The form field ID containing the password of customer",
       ]
     );
 

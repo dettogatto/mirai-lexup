@@ -5,18 +5,22 @@ namespace MiraiLexup;
 class LexupApi {
 
   private $base_url = 'https://api.staging.lexup.net/';
-  private $admin_email;
-  private $admin_password;
   private $admin_token;
   private $user_token;
   private $user_id;
 
-  function __construct(){
+  function __construct($ambient = "test", $admin_token = NULL){
     if(isset($_COOKIE['lexuptk1']) && strlen($_COOKIE['lexuptk1']) > 10){
       $this->user_token = strrev($_COOKIE['lexuptk1']);
     }
     if(isset($_COOKIE['lexupid'])){
       $this->user_id = intval($_COOKIE['lexupid']);
+    }
+    if(!empty($admin_token)){
+      $this->admin_token = $admin_token;
+    }
+    if($ambient == "production"){
+      $this->base_url = 'https://api.production.lexup.net/';
     }
   }
 
@@ -37,7 +41,14 @@ class LexupApi {
         "id" => $response["data"]["id"],
         "nome" => $response["data"]["nome"],
         "cognome" => $response["data"]["cognome"],
-        "avatar" => $response["data"]["avatar"]
+        "avatar" => $response["data"]["avatar"],
+        "token" => $this->user_token
+      ];
+    }
+    if(!empty($response['errors'])){
+      return [
+        "success" => false,
+        "errors" => $response["errors"]
       ];
     }
     return false;
@@ -54,7 +65,7 @@ class LexupApi {
       "free_trial" => $free_trial
     ];
     $response = $this->curl($url, $data);
-    if(isset($response['data'])){
+    if(!empty($response['data'])){
       return [
         'success' => true
       ];
@@ -68,8 +79,14 @@ class LexupApi {
     return false;
   }
 
-  function create_user($nome, $cognome, $email, $titolo = "Professionista"){
+  function crm_create_user($nome, $cognome, $email, $titolo = "Professionista"){
     $url = 'cms/v1/utenti';
+
+    // Check if student
+    if($this->check_student_mail($email)){
+      $titolo = "Studente";
+    }
+
     $data = [
       "account" => "subscriber",
       "nome" => $nome,
@@ -90,7 +107,12 @@ class LexupApi {
     ];
     $response = $this->admin_curl($url, $data);
     if(!empty($response['data'])){
-      setcookie('lexupid', $response['data']['id'], time()+3600*24);
+      $this->user_id = $response['data']['id'];
+      setcookie('lexupid', $this->user_id, time()+3600*24);
+      return [
+        "success" => true,
+        "id" => $this->user_id
+      ];
     } else {
       return [
         "success" => false,
@@ -99,7 +121,7 @@ class LexupApi {
     }
   }
 
-  function create_subscription(){
+  function crm_create_subscription(){
     // TODO
   }
 
@@ -114,42 +136,42 @@ class LexupApi {
     return false;
   }
 
-  function get_user_by_id($id){
+  function get_user_info_by_id($id){
     $url = 'cms/v1/utenti/' . intval($id);
     var_dump($url);
     $response = $this->admin_curl($url, NULL, "GET");
     return $response;
   }
 
-  function get_current_user(){
-    if($this->user_id){
-      return $this->get_user_by_id($this->user_id);
-    } else {
-      return false;
-    }
-  }
-
-  private function login_admin(){
-    if($this->admin_token){
-      return true;
-    }
-    $url = 'cms/v1/login';
-    $data = ["login" => $this->admin_email, "password" => strrev($this->admin_password)];
-    $response = $this->curl($url, $data);
-    if(!empty($response["data"]) && isset($response["data"]["token"])){
-      $this->admin_token = $response["data"]["token"];
-      return true;
+  function get_last_created_user_id(){
+    if(!empty($this->user_id)){
+      return $this->user_id;
     }
     return false;
   }
 
+  function get_logged_user($tk = NULL){
+    $url = 'v1/utente';
+    if(!$tk){
+      $tk = $this->user_token;
+    }
+    if(empty($tk)){
+      return false;
+    }
+    $response = $this->curl($url, NULL, "GET", $tk);
+    if(!empty($response["data"])){
+      return $response["data"];
+    }
+    return false;
+  }
+
+
   private function admin_curl($url, $body = NULL, $method = "POST", $token = false){
-    if(!$this->login_admin()){
-      echo("Cannot login in Lexup");
+    if(empty($this->admin_token)){
+      echo("No admin token given!");
       die();
     }
-    $token = $this->admin_token;
-    return $this->curl($url, $body, $method, $token);
+    return $this->curl($url, $body, $method, $this->admin_token);
   }
 
   private function curl($url, $body = NULL, $method = "POST", $token = false){
