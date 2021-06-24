@@ -5,8 +5,8 @@ namespace MiraiLexup;
 class LexupApi {
 
   private $base_url = 'https://api.staging.lexup.net/';
-  private $admin_email = "nicola.cavallazzi+admintestlexup@mirai-bay.com";
-  private $admin_password = "HMtDUc51Hqj6Zhld";
+  private $admin_email;
+  private $admin_password;
   private $admin_token;
   private $user_token;
   private $user_id;
