@@ -145,7 +145,8 @@ class MiraiLexupOptions
 
       // Include api
       require_once( __DIR__ . '/../api/lexup-api.php' );
-      $lexup = new LexupApi();
+      $options = get_option( 'mirai_lexup_options' );
+      $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
 
       $user_data = $lexup->login_user($input['admin_mail'], $input['admin_password']);
 
