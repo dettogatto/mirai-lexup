@@ -2,7 +2,6 @@
 
 // TODO on order creation add meta to order with user ID or all needed data
 
-
 add_action('woocommerce_payment_complete', function($order_id) {
   $order = wc_get_order( $order_id );
   $parent_id = $order->get_parent_id();
@@ -10,6 +9,7 @@ add_action('woocommerce_payment_complete', function($order_id) {
 
   $options = get_option( 'mirai_lexup_options' );
   $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
+  $activecampaign = new ActivecampaignApi();
 
   $months = 1;
   $titolo = "professionista";
@@ -25,22 +25,51 @@ add_action('woocommerce_payment_complete', function($order_id) {
   }
 
   $user_id = $lexup->get_last_created_user_id();
+
   if(!$user_id){
     // TODO log error somewhere
     $order->add_order_note("Could not find Lexup User ID. Subscription not active on Lexup.");
     return false;
   }
 
+  update_post_meta($order_id, 'lexup_user_id', $user_id);
+
   $response = $lexup->cms_renew_subscription($user_id, $order_id, $parent_id, $months);
+  $user_info = $lexup->get_user_info_by_id($user_id);
+
+  $ac_user = [
+    "email" => $user_info["email"]["field"],
+    "firstName" => $user_info["nome"],
+    "lastName" => $user_info["cognome"],
+    "phone" => !empty($user_info["telefono"]["field"]) ? $user_info["telefono"]["field"] : ""
+  ];
+
+  $ac_tags = [];
+  if($months == 12 && $titolo == "studente"){
+    $ac_tags[] = 40;
+  } else if($months == 1 && $titolo == "studente"){
+    $ac_tags[] = 39;
+  } else if($months == 12 && $titolo == "professionista"){
+    $ac_tags[] = 41;
+  } else if($months == 1 && $titolo == "professionista"){
+    $ac_tags[] = 43;
+  }
+
+  $ac_fields = [
+    9 => $user_info["abbonamentoDataFine"],
+    23 => $user_id,
+    24 => $user_info["appUserId"]
+  ];
 
   if($response["success"]){
-    update_post_meta($order_id, 'lexup_user_id', $user_id);
-    // TODO Activecampaing
+    // Success!
   } else {
-    // TODO log error somewhere
+    $ac_fields[25] = "Could activate subscription on Lexup.";
     $order->add_order_note("Could activate subscription on Lexup.");
-    return false;
   }
+
+  // Activecampaign
+  $activecampaign->super_sync_contact($ac_user, $ac_tags, $ac_fields);
 
 });
 
@@ -66,6 +95,31 @@ add_action('woocommerce_payment_complete', function($order_id) {
 // woocommerce_subscription_renewal_payment_failed
 // Triggered when a renewal payment fails for a subscription.
 
+add_action('woocommerce_subscription_renewal_payment_failed', function($order_id){
+  $order = wc_get_order( $order_id );
+  $parent_id = $order->get_parent_id();
+
+  $options = get_option( 'mirai_lexup_options' );
+  $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
+  $activecampaign = new ActivecampaignApi();
+
+  $user_id = get_post_meta($parent_id, 'lexup_user_id', true);
+
+  if($user_id){
+    $user_info = $lexup->get_user_info_by_id($user_id);
+
+    $ac_user = [
+      "email" => $user_info["email"]["field"],
+      "firstName" => $user_info["nome"],
+      "lastName" => $user_info["cognome"]
+    ];
+
+    $activecampaign->super_sync_contact($ac_user, [42]);
+
+  }
+
+});
+
 // Check if there is valid lexup account before order confirmation
 // If not create one
 add_action('woocommerce_after_checkout_validation', function($posted){
@@ -73,6 +127,7 @@ add_action('woocommerce_after_checkout_validation', function($posted){
   $email = $_POST['billing_email'];
   $nome = $_POST['billing_first_name'];
   $cognome = $_POST['billing_last_name'];
+  $telefono = $_POST['billing_phone'];
   $options = get_option( 'mirai_lexup_options' );
   $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
 
@@ -83,7 +138,7 @@ add_action('woocommerce_after_checkout_validation', function($posted){
     // The user is already present and logged in
   } else if($lexup->check_mail_available($email)){
     // The user must be created
-    $response = $lexup->cms_create_user($nome, $cognome, $email);
+    $response = $lexup->cms_create_user($nome, $cognome, $email, $telefono);
     if(!$response['success']){
       wc_add_notice( "Could not create user on Lexup", 'error');
     }

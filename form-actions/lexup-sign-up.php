@@ -68,6 +68,19 @@ class Elementor_Lexup_Sign_Up extends \ElementorPro\Modules\Forms\Classes\Action
       if ( ! empty( $redirect_to ) && filter_var( $redirect_to, FILTER_VALIDATE_URL ) ) {
         $ajax_handler->add_response_data( 'redirect_url', $redirect_to );
       }
+
+      $activecampaign = new ActivecampaignApi();
+      $ac_user = [
+        "email" => $email,
+        "firstName" => $name,
+        "lastName" => $surname
+      ];
+      $ac_tags = [];
+      if($free_trial){
+        $ac_tags[] = 35;
+      }
+      $activecampaign->super_sync_contact($ac_user, $ac_tags);
+
       return;
 
     } elseif(!empty($response["errors"])){

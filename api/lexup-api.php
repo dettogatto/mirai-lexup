@@ -79,12 +79,20 @@ class LexupApi {
     return false;
   }
 
-  function cms_create_user($nome, $cognome, $email, $titolo = "Professionista"){
+  function cms_create_user($nome, $cognome, $email, $telefono = NULL, $titolo = "Professionista"){
     $url = 'cms/v1/utenti';
 
     // Check if student
     if($this->check_student_mail($email)){
       $titolo = "Studente";
+    }
+
+    $telefono_data = [];
+    if(!empty($telefono)){
+      $telefono_data = [
+        "field" => $telefono,
+        "show" =>false
+      ];
     }
 
     $data = [
@@ -95,7 +103,7 @@ class LexupApi {
         "field" => $email,
         "show" =>false
       ],
-      "telefono" =>[],
+      "telefono" => $telefono_data,
       "indirizzo" =>[],
       "titolo" =>[
         "field" => $titolo,

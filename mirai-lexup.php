@@ -5,7 +5,7 @@ namespace MiraiLexup;
 * Plugin Name: Mirai - Lexup
 * Description: Connects Elementor and Woocommerce to Lexup
 * Plugin URI:  https://cosmo.cat
-* Version:     0.1.4
+* Version:     0.1.5
 * Author:      Nicola Cavallazzi
 * Author URI:  https://cosmo.cat/
 * Text Domain: mirai-lexup
@@ -48,8 +48,9 @@ add_action( 'elementor_pro/init', function(){
 
 } );
 
-// Include Api
+// Include Apis
 require_once( __DIR__ . '/api/lexup-api.php' );
+require_once( __DIR__ . '/api/ac-api.php' );
 
 include_once(__DIR__ . "/admin/admin-settings.php");
 include_once(__DIR__ . "/frontend/woocommerce.php");

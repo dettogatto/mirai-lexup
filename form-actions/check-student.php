@@ -53,6 +53,10 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
 
     if($is_student === true){
 
+      $activecampaign = new ActivecampaignApi();
+      $ac_user = [ "email" => $email ];
+      $activecampaign->super_sync_contact($ac_user, [36]);
+
       $redirect_to = $settings[$this->get_name() . "_url_success" ];
       $redirect_to = $record->replace_setting_shortcodes( $redirect_to, true );
       if ( ! empty( $redirect_to ) && filter_var( $redirect_to, FILTER_VALIDATE_URL ) ) {
