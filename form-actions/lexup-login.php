@@ -39,7 +39,6 @@ class Elementor_Lexup_Login extends \ElementorPro\Modules\Forms\Classes\Action_B
   public function run( $record, $ajax_handler ) {
 
     // Include api
-    require_once( __DIR__ . '/../api/lexup-api.php' );
     $options = get_option( 'mirai_lexup_options' );
     $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
 

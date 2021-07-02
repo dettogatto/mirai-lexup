@@ -79,7 +79,7 @@ class LexupApi {
     return false;
   }
 
-  function crm_create_user($nome, $cognome, $email, $titolo = "Professionista"){
+  function cms_create_user($nome, $cognome, $email, $titolo = "Professionista"){
     $url = 'cms/v1/utenti';
 
     // Check if student
@@ -111,7 +111,8 @@ class LexupApi {
       setcookie('lexupid', $this->user_id, time()+3600*24);
       return [
         "success" => true,
-        "id" => $this->user_id
+        "id" => $this->user_id,
+        "data" => $response['data']
       ];
     } else {
       return [
@@ -121,8 +122,66 @@ class LexupApi {
     }
   }
 
-  function crm_create_subscription(){
-    // TODO
+  function cms_renew_subscription($user_id, $payment_id, $original_payment_id = null, $months = 1){
+    $url = "cms/v1/subscription/full";
+
+    $data = [
+      "app_user_id" => 1,
+      "type" => "LEXUP_WOOCOMMERCE",
+      "starting_date" => NULL,
+      "ending_date" => NULL,
+      "payment_provider_name"  =>"WOOCOMMERCE",
+      "payment_provider_unique_id" => (string) $payment_id, // id univoco che identifica il pagamento nel database di woocommerce
+      "original_payment_id" => null, // nel caso di pagamento ricorrenti l'id originale del primo abbonamento
+      "payment_provider_transaction_id" => (string) $payment_id, // In alcuni casi i sistemi di pagamento oltre ad avere un id di pagamento hanno un id di transazione collegato al trasferimento monetario
+      "receipt" => "Receipt",
+      "payment_date" => null
+    ];
+
+    $user_data = $this->get_user_info_by_id($user_id);
+    if(!empty($user_data)){
+      // The user is valid
+
+      $starting_time;
+      if(!empty($user_data['abbonamentoDataFine']) && strtotime($user_data['abbonamentoDataFine']) >= time()){
+        $starting_time = strtotime($user_data['abbonamentoDataFine']);
+      } else {
+        $starting_time = time();
+      }
+      $starting_date = date('Y-m-d', $starting_time);
+      $end_time = strtotime('+'.$months.' months', $starting_time);
+      $ending_date = date('Y-m-d', $end_time);
+
+      $data["app_user_id"] = $user_data["appUserId"];
+      $data["starting_date"] = $starting_date;
+      $data["ending_date"] = $ending_date;
+
+      $response = $this->admin_curl($url, $data);
+
+      if(!empty($response["data"]) && $response["data"]["success"]){
+        // Success!
+        return $response["data"];
+      } elseif (!empty($response["errors"])) {
+        $response["success"] = false;
+        return $response;
+      } elseif (!empty($response["exception"])) {
+        return [
+          "success" => false,
+          "message" => $response["message"],
+          "errors" => [
+            "payment_provider_unique_id" => "There is a good chance this is not unique"
+          ]
+        ];
+      }
+    }
+
+    return [
+      "success" => false,
+      "errors" => [
+        "user_id" => "Invalid user id provided"
+      ]
+    ];
+
   }
 
   function check_student_mail($email){
@@ -138,9 +197,11 @@ class LexupApi {
 
   function get_user_info_by_id($id){
     $url = 'cms/v1/utenti/' . intval($id);
-    var_dump($url);
     $response = $this->admin_curl($url, NULL, "GET");
-    return $response;
+    if(!empty($response["data"])){
+      return $response["data"];
+    }
+    return false;
   }
 
   function get_last_created_user_id(){
@@ -165,6 +226,20 @@ class LexupApi {
     return false;
   }
 
+  function check_mail_available($email){
+    $url = 'v1/login/registration';
+    $data = [
+      "email" => $email
+    ];
+    $response = $this->curl($url, $data);
+    if(!empty($response['errors'])){
+      if(!empty($response['errors']['email']) && strpos(implode(" ", $response['errors']['email']), 'taken') !== false){
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
 
   private function admin_curl($url, $body = NULL, $method = "POST", $token = false){
     if(empty($this->admin_token)){
@@ -176,17 +251,19 @@ class LexupApi {
 
   private function curl($url, $body = NULL, $method = "POST", $token = false){
     $url = $this->base_url . $url;
+    $headers = array();
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, 1);
     if($body){
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-      curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+      $headers[] = 'Content-Type: application/json';
     }
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     if($token){
-      curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: ' . $token));
+      $headers[] = 'Authorization: ' . $token;
     }
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
     $server_output = curl_exec($ch);
     $response = json_decode($server_output, true);

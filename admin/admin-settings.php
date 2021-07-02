@@ -143,8 +143,7 @@ class MiraiLexupOptions
     $new_input = array();
     if( !empty($input['admin_mail']) && !empty($input['admin_password']) ){
 
-      // Include api
-      require_once( __DIR__ . '/../api/lexup-api.php' );
+      // Api
       $options = get_option( 'mirai_lexup_options' );
       $lexup = new LexupApi($options["api_ambient"], $options["admin_token"]);
 
@@ -190,7 +189,6 @@ class MiraiLexupOptions
   public function print_section_login_present()
   {
     // Include api
-    require_once( __DIR__ . '/../api/lexup-api.php' );
     $lexup = new LexupApi($this->options['api_ambient'], $this->options['admin_token']);
 
     $admin_user = $lexup->get_logged_user($this->options['admin_token']);
