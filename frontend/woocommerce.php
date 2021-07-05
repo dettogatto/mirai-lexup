@@ -38,10 +38,10 @@ add_action('woocommerce_payment_complete', function($order_id) {
   $user_info = $lexup->get_user_info_by_id($user_id);
 
   $ac_user = [
-    "email" => $user_info["email"]["field"],
-    "firstName" => $user_info["nome"],
-    "lastName" => $user_info["cognome"],
-    "phone" => !empty($user_info["telefono"]["field"]) ? $user_info["telefono"]["field"] : ""
+    "email" => $order->get_billing_email(),
+    "firstName" => $order->get_billing_first_name(),
+    "lastName" => $order->get_billing_last_name(),
+    "phone" => $order->get_billing_phone()
   ];
 
   $ac_tags = [];

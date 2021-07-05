@@ -88,7 +88,7 @@ class LexupApi {
     }
 
     $telefono_data = [];
-    if(!empty($telefono)){
+    if(false && !empty($telefono)){ // Currently bugged in API
       $telefono_data = [
         "field" => $telefono,
         "show" =>false
