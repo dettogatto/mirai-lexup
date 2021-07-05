@@ -55,7 +55,7 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
     $ac_user = [ "email" => $email ];
 
     if($is_student === true){
-      $activecampaign->super_sync_contact($ac_user, [36]);
+      $activecampaign->super_sync_contact($ac_user, [47]);
 
       $redirect_to = $settings[$this->get_name() . "_url_success" ];
       $redirect_to = $record->replace_setting_shortcodes( $redirect_to, true );
@@ -65,7 +65,7 @@ class Elementor_Lexup_Check_Student extends \ElementorPro\Modules\Forms\Classes\
       return;
 
     } elseif($is_student === false){
-      $activecampaign->super_sync_contact($ac_user);
+      $activecampaign->super_sync_contact($ac_user, [36]);
 
       $redirect_to = $settings[$this->get_name() . "_url_ineligible" ];
       $redirect_to = $record->replace_setting_shortcodes( $redirect_to, true );
