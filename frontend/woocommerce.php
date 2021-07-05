@@ -1,6 +1,6 @@
 <?php
 
-// TODO on order creation add meta to order with user ID or all needed data
+namespace MiraiLexup;
 
 add_action('woocommerce_payment_complete', function($order_id) {
   $order = wc_get_order( $order_id );
