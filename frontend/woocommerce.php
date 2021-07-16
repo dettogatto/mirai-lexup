@@ -109,9 +109,10 @@ add_action('woocommerce_subscription_renewal_payment_failed', function($order_id
     $user_info = $lexup->get_user_info_by_id($user_id);
 
     $ac_user = [
-      "email" => $user_info["email"]["field"],
-      "firstName" => $user_info["nome"],
-      "lastName" => $user_info["cognome"]
+      "email" => $order->get_billing_email(),
+      "firstName" => $order->get_billing_first_name(),
+      "lastName" => $order->get_billing_last_name(),
+      "phone" => $order->get_billing_phone()
     ];
 
     $activecampaign->super_sync_contact($ac_user, [42]);

@@ -65,7 +65,7 @@ class LexupApi {
       "free_trial" => $free_trial
     ];
     $response = $this->curl($url, $data);
-    if(!empty($response['data'])){
+    if(isset($response['data'])){
       return [
         'success' => true
       ];
@@ -90,8 +90,8 @@ class LexupApi {
     $telefono_data = [];
     if(false && !empty($telefono)){ // Currently bugged in API
       $telefono_data = [
-        "field" => $telefono,
-        "show" =>false
+        "field" => (string)$telefono,
+        "show" => false
       ];
     }
 
@@ -113,7 +113,10 @@ class LexupApi {
       "showCommenti" => true,
       "showAppunti" => false
     ];
+
+    echo(json_encode($data, JSON_PRETTY_PRINT));
     $response = $this->admin_curl($url, $data);
+    var_dump($response);
     if(!empty($response['data'])){
       $this->user_id = $response['data']['id'];
       setcookie('lexupid', $this->user_id, time()+3600*24);
